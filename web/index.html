@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050608">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ESP · Color Detector</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23050608'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='13'%20fill='none'%20stroke='%23a5d9ff'%20stroke-width='3'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='4'%20fill='%23a5d9ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<noscript><p class="noscript">This app needs JavaScript to run.</p></noscript>
+<div id="glowA" class="glow" aria-hidden="true"></div>
+<div id="glowB" class="glow" aria-hidden="true"></div>
+
+<!-- ═══════════ SPLASH ═══════════ -->
+<div id="splash">
+  <div class="brand">ESP · COLOR DETECTOR</div>
+  <div class="halo" aria-hidden="true"></div>
+  <h1>Every color,<br><em>mirrored in light.</em></h1>
+  <p class="lead">Point your camera at any color and watch it glow in real time on a single RGB LED.</p>
+  <button id="btnStart" class="btn primary big" type="button">
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span id="btnStartLabel">Enable Camera</span>
+  </button>
+  <button id="btnStartManual" class="btn ghost" type="button">Continue without camera</button>
+  <p class="hint">The camera runs locally on your phone — nothing is uploaded.</p>
+</div>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<div id="app" hidden>
+  <header>
+    <div class="brand">ESP · COLOR DETECTOR</div>
+    <div id="pill" class="pill" data-state="wait" role="status" aria-live="off">
+      <span id="pillDot" class="dot" aria-hidden="true"></span><span id="pillText">Linking…</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Camera stage -->
+    <section id="stage" aria-label="Color camera view">
+      <video id="video" playsinline webkit-playsinline muted autoplay></video>
+      <img id="photo" alt="Captured photo" hidden>
+      <div id="idle" class="stagePanel">
+        <svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <p id="idleTitle">Camera idle</p>
+        <p id="idleSub">Start it whenever you're ready.</p>
+        <button id="btnIdleStart" class="btn primary" type="button">Enable Camera</button>
+      </div>
+      <div id="reticle" aria-hidden="true">
+        <div class="ring"></div>
+        <div id="retSwatch"></div>
+        <i class="tick t1"></i><i class="tick t2"></i><i class="tick t3"></i><i class="tick t4"></i>
+      </div>
+      <div id="hudTop" class="hud"><span id="hudLive">LIVE</span><span id="hudBadge" hidden>LOCKED</span></div>
+      <div id="hudBottom" class="hud">CENTER SAMPLE</div>
+      <i class="corner c1" aria-hidden="true"></i><i class="corner c2" aria-hidden="true"></i><i class="corner c3" aria-hidden="true"></i><i class="corner c4" aria-hidden="true"></i>
+      <div id="scanline" aria-hidden="true"></div>
+      <div id="errCard" class="stageCard" role="alert" hidden></div>
+      <div id="infoCard" class="stageCard" role="note" hidden></div>
+    </section>
+
+    <!-- Color card -->
+    <section id="card" aria-label="Detected color">
+      <div class="cardTop">
+        <div id="hexWrap"><span class="hash" aria-hidden="true">#</span><span id="hexDigits" class="digits"></span></div>
+        <div id="nameTag">—</div>
+      </div>
+      <div class="cardMeta">
+        <span id="rgbVal">rgb(0, 0, 0)</span><span class="sep">·</span><span id="hslVal">hsl(0, 0%, 0%)</span>
+      </div>
+      <div class="cardActions">
+        <div id="syncChip" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>LED</span></div>
+        <span class="spacer"></span>
+        <button id="btnLock" class="iconBtn" type="button" aria-pressed="false" aria-label="Lock the current color">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path id="lockPath" d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span id="lockLabel">Lock</span>
+        </button>
+        <button id="btnCopy" class="iconBtn" type="button" aria-label="Copy the HEX code">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span>Copy</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Recent colors -->
+    <section id="recent" aria-label="Recent colors" hidden></section>
+  </main>
+
+  <!-- Floating dock -->
+  <nav id="dock" aria-label="Controls">
+    <button id="dockCam" class="dockBtn" type="button" aria-pressed="false" aria-label="Toggle camera">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
+    <button id="dockManual" class="dockBtn" type="button" aria-label="Open the manual color picker">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+    </button>
+    <button id="dockBright" class="dockBtn" type="button" aria-label="Open the LED brightness control">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </nav>
+
+  <!-- Bottom sheets -->
+  <div id="scrim" hidden></div>
+  <section id="sheetManual" class="sheet" role="dialog" aria-label="Manual color picker" hidden>
+    <div class="grabber" aria-hidden="true"></div>
+    <h2>Manual color</h2>
+    <div id="svWrap"><canvas id="sv" tabindex="0" aria-label="Saturation and brightness pad"></canvas><div id="svThumb" class="thumb" aria-hidden="true"></div></div>
+    <div id="hueWrap"><canvas id="hue" tabindex="0" aria-label="Hue slider"></canvas><div id="hueThumb" class="thumb hue" aria-hidden="true"></div></div>
+    <div class="sheetRow">
+      <span id="manualHex" class="mono">#3fa7d6</span>
+      <button id="btnManualSave" class="btn ghost small" type="button">Save to recent</button>
+    </div>
+  </section>
+  <section id="sheetBright" class="sheet" role="dialog" aria-label="LED brightness" hidden>
+    <div class="grabber" aria-hidden="true"></div>
+    <h2>LED brightness</h2>
+    <input type="range" id="brightSlider" min="0" max="100" value="100" aria-label="LED brightness percent">
+    <div class="sheetRow">
+      <span id="brightVal" class="mono">100%</span>
+      <span class="hintText">Scales the LED output globally</span>
+    </div>
+  </section>
+
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <input type="file" id="filePick" accept="image/*" capture="environment" class="visually-hidden" aria-label="Capture a photo">
+</div>
+<script src="app.js"></script>
+</body>
+</html>
